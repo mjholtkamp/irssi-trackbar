@@ -29,8 +29,10 @@
 #   - Main maintainer & author: Peter 'kinlo' Leurs
 #   - Many thanks to Timo 'cras' Sirainen for placing me on my way
 #   - on-upgrade-remove-line patch by Uwe Dudenhoeffer
+#   - trackbar resizing by Michiel Holtkamp
 #
 # Version history:
+#  1.5: - Resize trackbars in all windows when terminal is resized
 #  1.4: - Changed our's by my's so the irssi script header is valid
 #       - Removed utf-8 support.  In theory, the script should work w/o any
 #         problems for utf-8, just set trackbar_string to a valid utf-8 character
@@ -59,7 +61,6 @@
 # Known bugs:
 #  - if you /clear a window, it will be uncleared when returning to the window
 #  - UTF-8 characters in the trackbar_string doesnt work.  This is an irssi bug.
-#  - if you resize your irssi (in xterm or so) the bar is not resized 
 #  - changing the trackbar style is only visible after returning to a window
 #  however, changing style/resize takes in effect after you left the window.
 #
@@ -82,19 +83,21 @@ use 5.6.1;
 use Irssi;
 use Irssi::TextUI;
 
-my $VERSION = "1.4";
+my $VERSION = "1.5";
 
 my %IRSSI = (
-    authors     => "Peter 'kinlo' Leurs",
+    authors     => "Peter 'kinlo' Leurs, Uwe Dudenhoeffer, Michiel Holtkamp",
     contact     => "peter\@pfoe.be",
     name        => "trackbar",
     description => "Shows a bar where you've last read a window",
     license     => "GPLv2",
     url         => "http://www.pfoe.be/~peter/trackbar/",
-    changed     => "Thu Feb 20 16:18:08 2003",
+    changed     => "Mon, 02 Jul 2012 00:53:39 +0200",
 );
 
 my %config;
+
+my $screen_resizing = 0;   # terminal is being resized
 
 Irssi::settings_add_str('trackbar', 'trackbar_string' => '-');
 $config{'trackbar_string'} = Irssi::settings_get_str('trackbar_string');
@@ -127,6 +130,36 @@ Irssi::signal_add(
         }
     }
 );
+
+# terminal resize code inspired on nicklist.pl
+sub sig_terminal_resized {
+	if ($screen_resizing) {
+		# prevent multiple resize_trackbars from running
+		return;
+	}
+	$screen_resizing = 1;
+	Irssi::timeout_add_once(10,\&resize_trackbars,[]);
+}
+
+sub resize_trackbars {
+	my $active_win = Irssi::active_win();
+	for my $window (Irssi::windows) {
+		next unless defined $window;
+		my $line = $window->view()->get_bookmark('trackbar');
+		next unless defined $line;
+
+		# first add new trackbar line, then remove the old one. For some reason
+		# this works better than removing the old one, then adding a new one
+		$window->print_after($line, MSGLEVEL_NEVER, line($window->{'width'}));
+		my $next = $line->next();
+		$window->view()->set_bookmark('trackbar', $next);
+		$window->view()->remove_line($line);
+	}
+	$active_win->view()->redraw();
+	$screen_resizing = 0;
+}
+
+Irssi::signal_add('terminal resized' => \&sig_terminal_resized);
 
 sub line {
     my $width  = shift;
