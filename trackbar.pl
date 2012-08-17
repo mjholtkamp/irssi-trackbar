@@ -2,7 +2,7 @@
 #
 # Track what you read last when switching to a window.
 #
-#    Copyright (C) 2003,2012  Peter Leurs
+#    Copyright (C) 2003  Peter Leurs
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@
 #   - Main maintainer & author: Peter 'kinlo' Leurs
 #   - Many thanks to Timo 'cras' Sirainen for placing me on my way
 #   - on-upgrade-remove-line patch by Uwe Dudenhoeffer
-#   - trackbar resizing by Michiel Holtkamp
+#   - trackbar resizing by Michiel Holtkamp (02 Jul 2012)
 #
 # Version history:
 #  1.5: - Resize trackbars in all windows when terminal is resized
