@@ -1,0 +1,9 @@
+This fork of trackbar.pl is created because the original author didn't reply.
+
+I added trackbar resizing after terminal size change, so I wanted to let
+everyone benefit from my change and merge my code into the original version
+(and have it on scripts.irssi.org). Since I couldn't make contact with the
+original owner, I'm releasing my modifications here.
+
+If somebody else has patches, please send a pull request or a diff. I'll
+try to get this on scripts.irssi.org later.
