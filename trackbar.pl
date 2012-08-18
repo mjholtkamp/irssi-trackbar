@@ -105,11 +105,11 @@ my $VERSION = "1.5";
 
 my %IRSSI = (
     authors     => "Peter 'kinlo' Leurs, Uwe Dudenhoeffer, Michiel Holtkamp",
-    contact     => "peter\@pfoe.be",
+    contact     => "irssi-trackbar\@supermind.nl",
     name        => "trackbar",
     description => "Shows a bar where you've last read a window",
     license     => "GPLv2",
-    url         => "http://www.pfoe.be/~peter/trackbar/",
+    url         => "http://github.com/mjholtkamp/irssi-trackbar/",
     changed     => "Mon, 02 Jul 2012 00:53:39 +0200",
 );
 
