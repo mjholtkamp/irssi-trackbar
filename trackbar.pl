@@ -50,6 +50,7 @@
 #   - trackbar resizing by Michiel Holtkamp (02 Jul 2012)
 #
 # Version history:
+#  1.6: - Work around Irssi resize bug (see below)
 #  1.5: - Resize trackbars in all windows when terminal is resized
 #  1.4: - Changed our's by my's so the irssi script header is valid
 #       - Removed utf-8 support.  In theory, the script should work w/o any
@@ -67,14 +68,6 @@
 #  1.1: - Fixed bug when closing window
 #  1.0: - Initial release
 #
-#
-#  Call for help!
-#
-#  There is a trackbar version 2.0 that properly handles resizes and immediate config change
-#  activation.  However, there is/are some bug(s) in irssi's main buffer/window code that causes
-#  irssi to 'forget' lines, which is ofcourse completly unaccepteable.  I haven't found the time
-#  nor do I know the irssi's internals enough to find and fix this bug, if you want to help, please
-#  contact me, I'll give you a copy of the 2.0 version that will immediatly show you the problems.
 #
 # Known bugs:
 #  - if you /clear a window, it will be uncleared when returning to the window
@@ -96,12 +89,26 @@
 # BTW: when you have feature requests, mailing a patch that works is the fastest way
 # to get it added :p
 
+# IRSSI RESIZE BUG:
+# when resizing from a larger window to a smaller one, the width of the
+# trackbar causes some lines at the bottom not to be shown. This only happens
+# if the trackbar was not the last line. This glitch can be 'fixed' by
+# resetting the trackbar to the last line (e.g. by switching to another window
+# and back) and then resize twice (e.g. to a bigger size and back). Of course,
+# this is not convenient for the user.
+# This script works around this problem by printing not one, but two lines and
+# then removing the second line. My guess is that irssi does something to the
+# previous line (or the line cache) whenever a line is 'completed' (i.e. the
+# EOL is sent). When only one line is printed, it is not 'completed', but when
+# printing the second line, the first line is 'completed'. The second line is
+# still not completed, but since we delete it straight away, it doesn't matter.
+
 use strict;
 use 5.6.1;
 use Irssi;
 use Irssi::TextUI;
 
-my $VERSION = "1.5";
+my $VERSION = "1.6";
 
 my %IRSSI = (
     authors     => "Peter 'kinlo' Leurs, Uwe Dudenhoeffer, Michiel Holtkamp",
@@ -110,7 +117,7 @@ my %IRSSI = (
     description => "Shows a bar where you've last read a window",
     license     => "GPLv2",
     url         => "http://github.com/mjholtkamp/irssi-trackbar/",
-    changed     => "Mon, 02 Jul 2012 00:53:39 +0200",
+    changed     => "Tue, 04 Sep 2012 05:38:04 +0000",
 );
 
 my %config;
@@ -172,6 +179,11 @@ sub resize_trackbars {
 		my $next = $line->next();
 		$window->view()->set_bookmark('trackbar', $next);
 		$window->view()->remove_line($line);
+
+		# This hack exists to work around a bug: see IRSSI RESIZE BUG above.
+		# Add a line after the trackbar and delete it immediately
+		$window->print_after($next, MSGLEVEL_NEVER, line(1));
+		$window->view()->remove_line($next->next);
 	}
 	$active_win->view()->redraw();
 	$screen_resizing = 0;
