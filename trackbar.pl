@@ -28,32 +28,40 @@
 #     The script works right out of the box, but if you want you can change
 #     the working by /set'ing the following variables:
 #
-#     trackbar_string       The characters to repeat to draw the bar
-#     trackbar_style        The style for the bar, %r is red for example
-#                           See formats.txt that came with irssi
-#     trackbar_hide_windows Comma seperated list of window names where the
-#                           trackbar should not be drawn.
+#     trackbar_string            The characters to repeat to draw the bar
+#     trackbar_style             The style for the bar, %r is red for example
+#                                See formats.txt that came with irssi
+#     trackbar_hide_windows      Comma seperated list of window names where the
+#                                trackbar should not be drawn.
+#     trackbar_timestamp         Prints a timestamp at the start of the bar
+#     trackbar_timestamp_styled  When enabled, the timestamp respects
+#                                trackbar_style
 #
-#     /mark is a command that will redraw the line at the bottom.  However!  This
-#     requires irssi version after 20021228.  otherwise you'll get the error
-#     redraw: unknown command, and your screen is all goofed up :)
+#     /tb or /tb scroll is a command that will scroll to trackbar.
 #
-#     /upgrade & buf.pl notice: This version tries to remove the trackbars before 
-#     the upgrade is done, so buf.pl does not restore them, as they are not removeable
-#     afterwards by trackbar.  Unfortiounatly, to make this work, trackbar and buf.pl
-#     need to be loaded in a specific order.  Please experiment to see which order works
-#     for you (strangely, it differs from configuration to configuration, something I will
-#     try to fix in a next version) 
+#     /tb mark is a command that will redraw the line at the bottom.  However!
+#     This requires irssi version after 20021228.  otherwise you'll get the
+#     error redraw: unknown command, and your screen is all goofed up :)
+#
+#     /upgrade & buf.pl notice: This version tries to remove the trackbars
+#     before the upgrade is done, so buf.pl does not restore them, as they are
+#     not removeable afterwards by trackbar.  Unfortunately, to make this work,
+#     trackbar and buf.pl need to be loaded in a specific order. Please
+#     experiment to see which order works for you (strangely, it differs from
+#     configuration to configuration, something I will try to fix in a next
+#     version) 
 #
 # Authors:
 #   - Main maintainer & author: Peter 'kinlo' Leurs
 #   - Many thanks to Timo 'cras' Sirainen for placing me on my way
 #   - on-upgrade-remove-line patch by Uwe Dudenhoeffer
 #   - trackbar resizing by Michiel Holtkamp (02 Jul 2012)
-#   - scroll to trackbar, window excludes by Nico R. Wohlgemuth (22 Sep 2012)
+#   - scroll to trackbar, window excludes, and timestamp options by Nico R.
+#     Wohlgemuth (22 Sep 2012)
 #
 # Version history:
-#  1.7: - Added /tb scroll, trackbar_hide_windows
+#  1.7: - Added /tb scroll, trackbar_hide_windows, trackbar_timestamp_timestamp
+#         and trackbar_timestamp_styled
 #  1.6: - Work around Irssi resize bug, please do /upgrade! (see below)
 #  1.5: - Resize trackbars in all windows when terminal is resized
 #  1.4: - Changed our's by my's so the irssi script header is valid
@@ -76,8 +84,9 @@
 # Known bugs:
 #  - if you /clear a window, it will be uncleared when returning to the window
 #  - UTF-8 characters in the trackbar_string doesnt work.  This is an irssi bug.
+#    You can set it in the script though, see below, it is commented.
 #  - changing the trackbar style is only visible after returning to a window
-#  however, changing style/resize takes in effect after you left the window.
+#    however, changing style/resize takes in effect after you left the window.
 #
 # Whishlist/todo:
 #  - instead of drawing a line, just invert timestamp or something, 
@@ -86,7 +95,6 @@
 #              want the trackbar to go down in the previouswindow in  that splitwindow :)
 #  - < bob_2> anyway to clear the line once the window is read?
 #  - < elho> kinlo: wishlist item: a string that gets prepended to the repeating pattern
-#  - < elho> an option to still have the timestamp in front of the bar
 #
 # BTW: when you have feature requests, mailing a patch that works is the fastest way
 # to get it added :p
@@ -113,6 +121,7 @@ use strict;
 use 5.6.1;
 use Irssi;
 use Irssi::TextUI;
+use POSIX qw(strftime);
 
 my $VERSION = "1.7";
 
@@ -131,7 +140,8 @@ my %config;
 
 my $screen_resizing = 0;   # terminal is being resized
 
-Irssi::settings_add_str('trackbar', 'trackbar_hide_windows' => '(status)');
+# This could be '(status)' if you want to hide the status window
+Irssi::settings_add_str('trackbar', 'trackbar_hide_windows' => '');
 $config{'trackbar_hide_windows'} = Irssi::settings_get_str('trackbar_hide_windows');
 
 Irssi::settings_add_str('trackbar', 'trackbar_string' => '-');
@@ -140,11 +150,22 @@ $config{'trackbar_string'} = Irssi::settings_get_str('trackbar_string');
 Irssi::settings_add_str('trackbar', 'trackbar_style' => '%K');
 $config{'trackbar_style'} = Irssi::settings_get_str('trackbar_style');
 
+Irssi::settings_add_bool('trackbar', 'trackbar_timestamp' => 0);
+$config{'trackbar_timestamp'} = Irssi::settings_get_bool('trackbar_timestamp');
+
+Irssi::settings_add_bool('trackbar', 'trackbar_timestamp_styled' => 1);
+$config{'trackbar_timestamp_styled'} = Irssi::settings_get_bool('trackbar_timestamp_styled');
+
+$config{'timestamp_format'} = Irssi::settings_get_str('timestamp_format');
+
 Irssi::signal_add(
     'setup changed' => sub {
         $config{'trackbar_string'} = Irssi::settings_get_str('trackbar_string');
         $config{'trackbar_style'}  = Irssi::settings_get_str('trackbar_style');
         $config{'trackbar_hide_windows'} = Irssi::settings_get_str('trackbar_hide_windows');
+        $config{'trackbar_timestamp'} = Irssi::settings_get_bool('trackbar_timestamp');
+        $config{'trackbar_timestamp_styled'} = Irssi::settings_get_bool('trackbar_timestamp_styled');
+        $config{'timestamp_format'} = Irssi::settings_get_str('timestamp_format');
         if ($config{'trackbar_style'} =~ /(?<!%)[^%]|%%|%$/) {
             Irssi::print(
                 "trackbar: %RWarning!%n 'trackbar_style' seems to contain "
@@ -212,6 +233,12 @@ sub line {
     my $string = $config{'trackbar_string'};
     $string = '-' unless defined $string;
 
+    my $tslen = 0;
+
+    if ($config{'trackbar_timestamp'}) {
+        $tslen = int(1 + length $config{'timestamp_format'});
+    }
+
     # There is a bug in irssi's utf-8 handling on config file settings, as you 
     # can reproduce/see yourself by the following code sniplet:
     #
@@ -228,8 +255,8 @@ sub line {
     # unicode characters, uncomment the line below for a nice full line, or set
     # the string to whatever char you want.
 
+    # 0x2504 and 0x2508 work well too
     # $string = pack('U*', 0x2500);
-
 
     my $length = length $string;
 
@@ -238,10 +265,22 @@ sub line {
         $length = 1;
     }
 
-    my $times = $width / $length;
+    my $times = $width / $length - $tslen;
     $times = int(1 + $times) if $times != int($times);
     $string =~ s/%/%%/g;
-    return $config{'trackbar_style'} . substr($string x $times, 0, $width);
+
+    if ($tslen) {
+        # why $config{'timestamp_format'} won't work here?
+        my $ts = strftime(Irssi::settings_get_str('timestamp_format')." ", localtime);
+
+        if ($config{'trackbar_timestamp_styled'}) {
+            return $config{'trackbar_style'} . $ts . substr($string x $times, 0, $width);
+        } else {
+            return $ts . $config{'trackbar_style'} . substr($string x $times, 0, $width);
+        }
+    } else {
+        return $config{'trackbar_style'} . substr($string x $times, 0, $width);
+    }
 }
 
 # Remove trackbars on upgrade - but this doesn't really work if the scripts are not loaded in the correct order... watch out!
