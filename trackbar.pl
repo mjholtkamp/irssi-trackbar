@@ -50,7 +50,7 @@
 #   - trackbar resizing by Michiel Holtkamp (02 Jul 2012)
 #
 # Version history:
-#  1.6: - Work around Irssi resize bug (see below)
+#  1.6: - Work around Irssi resize bug, please do /upgrade! (see below)
 #  1.5: - Resize trackbars in all windows when terminal is resized
 #  1.4: - Changed our's by my's so the irssi script header is valid
 #       - Removed utf-8 support.  In theory, the script should work w/o any
@@ -102,6 +102,10 @@
 # EOL is sent). When only one line is printed, it is not 'completed', but when
 # printing the second line, the first line is 'completed'. The second line is
 # still not completed, but since we delete it straight away, it doesn't matter.
+#
+# Some effects from older versions (<1.6) of trackbar.pl can still screw up your
+# buffer so we recommend to restart your irssi, or do an "/upgrade". After
+# installing this version of trackbar.pl
 
 use strict;
 use 5.6.1;
