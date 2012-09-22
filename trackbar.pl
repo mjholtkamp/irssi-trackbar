@@ -48,8 +48,10 @@
 #   - Many thanks to Timo 'cras' Sirainen for placing me on my way
 #   - on-upgrade-remove-line patch by Uwe Dudenhoeffer
 #   - trackbar resizing by Michiel Holtkamp (02 Jul 2012)
+#   - scroll to trackbar by Nico R. Wohlgemuth (22 Sep 2012)
 #
 # Version history:
+#  1.7: - Added /tb scroll
 #  1.6: - Work around Irssi resize bug, please do /upgrade! (see below)
 #  1.5: - Resize trackbars in all windows when terminal is resized
 #  1.4: - Changed our's by my's so the irssi script header is valid
@@ -115,13 +117,14 @@ use Irssi::TextUI;
 my $VERSION = "1.6";
 
 my %IRSSI = (
-    authors     => "Peter 'kinlo' Leurs, Uwe Dudenhoeffer, Michiel Holtkamp",
+    authors     => "Peter 'kinlo' Leurs, Uwe Dudenhoeffer, " .
+                   "Michiel Holtkamp, Nico R. Wohlgemuth",
     contact     => "irssi-trackbar\@supermind.nl",
     name        => "trackbar",
     description => "Shows a bar where you've last read a window",
     license     => "GPLv2",
     url         => "http://github.com/mjholtkamp/irssi-trackbar/",
-    changed     => "Tue, 04 Sep 2012 05:38:04 +0000",
+    changed     => "Tue, 22 Sep 2012 14:33:31 +0000",
 );
 
 my %config;
@@ -234,13 +237,13 @@ sub line {
 
 # Remove trackbars on upgrade - but this doesn't really work if the scripts are not loaded in the correct order... watch out!
 
-Irssi::signal_add_first( 'session save' => sub {
-	    for my $window (Irssi::windows) {	
+Irssi::signal_add_first('session save' => sub {
+	for my $window (Irssi::windows) {
 		next unless defined $window;
 		my $line = $window->view()->get_bookmark('trackbar');
 		$window->view()->remove_line($line) if defined $line;
-	    }
 	}
+}
 );
 
 sub cmd_mark {
@@ -253,4 +256,41 @@ sub cmd_mark {
     Irssi::command("redraw");    
 }
 
-Irssi::command_bind('mark',   'cmd_mark');
+sub cmd_tb {
+	my ($subcmd) = @_;
+	if (defined($subcmd) && $subcmd eq "mark") {
+		cmd_mark();
+		return;
+	}
+	cmd_scroll();
+}
+
+sub cmd_scroll {
+	my $window = Irssi::active_win();
+	my $line = $window->view()->get_bookmark('trackbar');
+	$window->view()->scroll_line($line);
+}
+
+sub cmd_help {
+	my $help = <<HELP;
+TB MARK
+TB GOTO
+
+/TB MARK
+   - Set the trackbar of the current window at the bottom
+/TB SCROLL
+   - Scroll to where the trackbar is right now
+/TB
+   - Same as /TB SCROLL
+HELP
+	if ($_[0] eq 'tb' or $_[0] eq 'trackbar') {
+		Irssi::print($help, MSGLEVEL_CLIENTCRAP);
+		Irssi::signal_stop;
+	}
+}
+
+Irssi::command_bind('tb', 'cmd_tb');
+Irssi::command_bind('trackbar', 'cmd_tb');
+Irssi::command_bind('mark', 'cmd_mark');
+#Irssi::command_bind('scroll', 'cmd_scroll');
+Irssi::command_bind('help', 'cmd_help');
