@@ -31,6 +31,8 @@
 #     trackbar_string       The characters to repeat to draw the bar
 #     trackbar_style        The style for the bar, %r is red for example
 #                           See formats.txt that came with irssi
+#     trackbar_hide_windows Comma seperated list of window names where the
+#                           trackbar should not be drawn.
 #
 #     /mark is a command that will redraw the line at the bottom.  However!  This
 #     requires irssi version after 20021228.  otherwise you'll get the error
@@ -48,10 +50,10 @@
 #   - Many thanks to Timo 'cras' Sirainen for placing me on my way
 #   - on-upgrade-remove-line patch by Uwe Dudenhoeffer
 #   - trackbar resizing by Michiel Holtkamp (02 Jul 2012)
-#   - scroll to trackbar by Nico R. Wohlgemuth (22 Sep 2012)
+#   - scroll to trackbar, window excludes by Nico R. Wohlgemuth (22 Sep 2012)
 #
 # Version history:
-#  1.7: - Added /tb scroll
+#  1.7: - Added /tb scroll, trackbar_hide_windows
 #  1.6: - Work around Irssi resize bug, please do /upgrade! (see below)
 #  1.5: - Resize trackbars in all windows when terminal is resized
 #  1.4: - Changed our's by my's so the irssi script header is valid
@@ -80,13 +82,11 @@
 # Whishlist/todo:
 #  - instead of drawing a line, just invert timestamp or something, 
 #    to save a line (but I don't think this is possible with current irssi)
-#  - some pageup keybinding possibility, to scroll up upto the trackbar
 #  - <@coekie> kinlo: if i switch to another window, in another split window, i 
 #              want the trackbar to go down in the previouswindow in  that splitwindow :)
 #  - < bob_2> anyway to clear the line once the window is read?
 #  - < elho> kinlo: wishlist item: a string that gets prepended to the repeating pattern
 #  - < elho> an option to still have the timestamp in front of the bar
-#  - < elho> oh and an option to not draw it in the status window :P
 #
 # BTW: when you have feature requests, mailing a patch that works is the fastest way
 # to get it added :p
@@ -114,7 +114,7 @@ use 5.6.1;
 use Irssi;
 use Irssi::TextUI;
 
-my $VERSION = "1.6";
+my $VERSION = "1.7";
 
 my %IRSSI = (
     authors     => "Peter 'kinlo' Leurs, Uwe Dudenhoeffer, " .
@@ -131,6 +131,9 @@ my %config;
 
 my $screen_resizing = 0;   # terminal is being resized
 
+Irssi::settings_add_str('trackbar', 'trackbar_hide_windows' => '(status)');
+$config{'trackbar_hide_windows'} = Irssi::settings_get_str('trackbar_hide_windows');
+
 Irssi::settings_add_str('trackbar', 'trackbar_string' => '-');
 $config{'trackbar_string'} = Irssi::settings_get_str('trackbar_string');
 
@@ -141,6 +144,7 @@ Irssi::signal_add(
     'setup changed' => sub {
         $config{'trackbar_string'} = Irssi::settings_get_str('trackbar_string');
         $config{'trackbar_style'}  = Irssi::settings_get_str('trackbar_style');
+        $config{'trackbar_hide_windows'} = Irssi::settings_get_str('trackbar_hide_windows');
         if ($config{'trackbar_style'} =~ /(?<!%)[^%]|%%|%$/) {
             Irssi::print(
                 "trackbar: %RWarning!%n 'trackbar_style' seems to contain "
@@ -154,7 +158,12 @@ Irssi::signal_add(
     'window changed' => sub {
         my (undef, $oldwindow) = @_;
 
-        if ($oldwindow) {
+        my @hidden = split(',', $config{'trackbar_hide_windows'});
+
+        # remove whitespace around window names
+        s{^\s+|\s+$}{}g foreach @hidden;
+
+        if ($oldwindow && !($oldwindow->{'name'} ~~ @hidden)) {
             my $line = $oldwindow->view()->get_bookmark('trackbar');
             $oldwindow->view()->remove_line($line) if defined $line;
             $oldwindow->print(line($oldwindow->{'width'}), MSGLEVEL_NEVER);
@@ -248,12 +257,11 @@ Irssi::signal_add_first('session save' => sub {
 
 sub cmd_mark {
     my $window = Irssi::active_win();
-#    return unless defined $window;
     my $line = $window->view()->get_bookmark('trackbar');
     $window->view()->remove_line($line) if defined $line;
     $window->print(line($window->{'width'}), MSGLEVEL_NEVER);
     $window->view()->set_bookmark_bottom('trackbar');
-    Irssi::command("redraw");    
+    Irssi::active_win()->view()->redraw();
 }
 
 sub cmd_tb {
@@ -268,7 +276,7 @@ sub cmd_tb {
 sub cmd_scroll {
 	my $window = Irssi::active_win();
 	my $line = $window->view()->get_bookmark('trackbar');
-	$window->view()->scroll_line($line);
+	$window->view()->scroll_line($line) if defined $line;
 }
 
 sub cmd_help {
