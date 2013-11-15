@@ -307,6 +307,7 @@ sub cmd_mark {
 sub cmd_tb {
    if ($#_ >=0 ) {
        my $sc = shift @_;
+	   $sc =~ s/\s+$//;
 
        if ($sc eq "mark") {
           cmd_mark();
@@ -343,7 +344,15 @@ HELP
 }
 
 Irssi::command_bind('tb', 'cmd_tb');
+Irssi::command_bind('tb help', 'cmd_tb');
+Irssi::command_bind('tb mark', 'cmd_tb');
+Irssi::command_bind('tb scroll', 'cmd_tb');
+
 Irssi::command_bind('trackbar', 'cmd_tb');
+Irssi::command_bind('trackbar help', 'cmd_tb');
+Irssi::command_bind('trackbar mark', 'cmd_tb');
+Irssi::command_bind('trackbar scroll', 'cmd_tb');
+
 Irssi::command_bind('mark', 'cmd_mark');
 #Irssi::command_bind('scroll', 'cmd_scroll');
 Irssi::command_bind('help', 'cmd_help');
