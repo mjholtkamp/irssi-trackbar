@@ -303,13 +303,20 @@ sub cmd_mark {
     Irssi::active_win()->view()->redraw();
 }
 
+#  /tb or /trackbar
 sub cmd_tb {
-	my ($subcmd) = @_;
-	if (defined($subcmd) && $subcmd eq "mark") {
-		cmd_mark();
-		return;
-	}
-	cmd_scroll();
+   if ($#_ >=0 ) {
+       my $sc = shift @_;
+	   $sc =~ s/\s+$//;
+
+       if ($sc eq "mark") {
+          cmd_mark();
+       } elsif ($sc eq "help") {
+           cmd_help("trackbar");
+       } else {
+           cmd_scroll();
+       }
+   }
 }
 
 sub cmd_scroll {
@@ -319,25 +326,33 @@ sub cmd_scroll {
 }
 
 sub cmd_help {
-	my $help = <<HELP;
-TB MARK
-TB GOTO
-
-/TB MARK
-   - Set the trackbar of the current window at the bottom
-/TB SCROLL
-   - Scroll to where the trackbar is right now
-/TB
-   - Same as /TB SCROLL
+   my $help = <<HELP;
+/trackbar or /tb
+    /tb mark
+       - Set the trackbar of the current window at the bottom
+    /tb scroll
+       - Scroll to where the trackbar is right now
+    /tb help
+       - this help
+    /tb
+       - Same as /tb scroll
 HELP
-	if ($_[0] eq 'tb' or $_[0] eq 'trackbar') {
-		Irssi::print($help, MSGLEVEL_CLIENTCRAP);
-		Irssi::signal_stop;
-	}
+   if ($_[0] =~ m/^tb/ or $_[0] =~ m/^trackbar/ ) {
+      Irssi::print($help, MSGLEVEL_CLIENTCRAP);
+      Irssi::signal_stop;
+   }
 }
 
 Irssi::command_bind('tb', 'cmd_tb');
+Irssi::command_bind('tb help', 'cmd_tb');
+Irssi::command_bind('tb mark', 'cmd_tb');
+Irssi::command_bind('tb scroll', 'cmd_tb');
+
 Irssi::command_bind('trackbar', 'cmd_tb');
+Irssi::command_bind('trackbar help', 'cmd_tb');
+Irssi::command_bind('trackbar mark', 'cmd_tb');
+Irssi::command_bind('trackbar scroll', 'cmd_tb');
+
 Irssi::command_bind('mark', 'cmd_mark');
 #Irssi::command_bind('scroll', 'cmd_scroll');
 Irssi::command_bind('help', 'cmd_help');
