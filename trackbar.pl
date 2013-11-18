@@ -122,6 +122,7 @@ use 5.6.1;
 use Irssi;
 use Irssi::TextUI;
 use POSIX qw(strftime);
+use utf8;
 
 my $VERSION = "1.7";
 
@@ -231,7 +232,8 @@ Irssi::signal_add('terminal resized' => \&sig_terminal_resized);
 sub line {
     my $width  = shift;
     my $string = $config{'trackbar_string'};
-    $string = '-' unless defined $string;
+
+	# $string = '-' unless defined $string;
 
     my $tslen = 0;
 
@@ -258,12 +260,33 @@ sub line {
     # 0x2504 and 0x2508 work well too
     # $string = pack('U*', 0x2500);
 
+	utf8::decode($string);
+
+	if ($string =~ m/---/) {
+		$string = pack('U*', 0x2500);
+	}
+
+	if ($string =~ m/===/) {
+		$string = pack('U*', 0x2550);
+	}
+
+	if ($string =~ m/___/) {
+		$string = pack('U*', 0x2501);
+	}
+
+	if ($string =~ m/# #/) {
+		$string = pack('U*', 0x25ad)." ";
+	}
+
     my $length = length $string;
 
     if ($length == 0) {
         $string = '-';
         $length = 1;
     }
+
+	# Irssi::print($length, MSGLEVEL_CLIENTCRAP);
+	# Irssi::print("utf8", MSGLEVEL_CLIENTCRAP) if (utf8::is_utf8($string));
 
     my $times = $width / $length - $tslen;
     $times = int(1 + $times) if $times != int($times);
@@ -279,7 +302,7 @@ sub line {
             return $ts . $config{'trackbar_style'} . substr($string x $times, 0, $width);
         }
     } else {
-        return $config{'trackbar_style'} . substr($string x $times, 0, $width);
+		return $config{'trackbar_style'} . substr($string x $times, 0, $width);
     }
 }
 
