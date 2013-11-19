@@ -29,6 +29,10 @@
 #     the working by /set'ing the following variables:
 #
 #     trackbar_string            The characters to repeat to draw the bar
+#                                    "---" => U+2500 => a line
+#                                    "===" => U+2550 => a double line
+#                                    "___" => U+2501 => a wide line
+#                                    "# #" => U+25ad.U+0020 => a white rectangle and a space
 #     trackbar_style             The style for the bar, %r is red for example
 #                                See formats.txt that came with irssi
 #     trackbar_hide_windows      Comma seperated list of window names where the
@@ -83,8 +87,6 @@
 #
 # Known bugs:
 #  - if you /clear a window, it will be uncleared when returning to the window
-#  - UTF-8 characters in the trackbar_string doesnt work.  This is an irssi bug.
-#    You can set it in the script though, see below, it is commented.
 #  - changing the trackbar style is only visible after returning to a window
 #    however, changing style/resize takes in effect after you left the window.
 #
@@ -122,6 +124,7 @@ use 5.6.1;
 use Irssi;
 use Irssi::TextUI;
 use POSIX qw(strftime);
+use utf8;
 
 my $VERSION = "1.7";
 
@@ -231,7 +234,6 @@ Irssi::signal_add('terminal resized' => \&sig_terminal_resized);
 sub line {
     my $width  = shift;
     my $string = $config{'trackbar_string'};
-    $string = '-' unless defined $string;
 
     my $tslen = 0;
 
@@ -239,31 +241,41 @@ sub line {
         $tslen = int(1 + length $config{'timestamp_format'});
     }
 
-    # There is a bug in irssi's utf-8 handling on config file settings, as you 
+    if (!defined($string) || $string eq '') {
+        $string = '-';
+    }
+
+    # There is a bug in (irssi's) utf-8 handling on config file settings, as you 
     # can reproduce/see yourself by the following code sniplet:
     #
     #   my $quake = pack 'U*', 8364;    # EUR symbol
     #   Irssi::settings_add_str 'temp', 'temp_foo' => $quake;
-    #   Irssi::print length $quake;
-    #       # prints 1
-    #   Irssi::print length Irssi::settings_get_str 'temp_foo';
-    #       # prints 3
-    #
-    #
-    # Trackbar used to have a workaround, but on recent versions of perl/irssi
-    # it does no longer work.  Therefore, if you want your trackbar to contain
-    # unicode characters, uncomment the line below for a nice full line, or set
-    # the string to whatever char you want.
+    #   $a= length($quake);
+    #       # $a => 1
+    #   $a= length(Irssi::settings_get_str 'temp_foo');
+    #       # $a => 3
+	#	$a= utf8::is_utf8(Irssi::settings_get_str 'temp_foo');
+	#		# $a => false
 
-    # 0x2504 and 0x2508 work well too
-    # $string = pack('U*', 0x2500);
+	utf8::decode($string);
+
+	if ($string =~ m/---/) {
+		$string = pack('U*', 0x2500);
+	}
+
+	if ($string =~ m/===/) {
+		$string = pack('U*', 0x2550);
+	}
+
+	if ($string =~ m/___/) {
+		$string = pack('U*', 0x2501);
+	}
+
+	if ($string =~ m/# #/) {
+		$string = pack('U*', 0x25ad)." ";
+	}
 
     my $length = length $string;
-
-    if ($length == 0) {
-        $string = '-';
-        $length = 1;
-    }
 
     my $times = $width / $length - $tslen;
     $times = int(1 + $times) if $times != int($times);
@@ -279,7 +291,7 @@ sub line {
             return $ts . $config{'trackbar_style'} . substr($string x $times, 0, $width);
         }
     } else {
-        return $config{'trackbar_style'} . substr($string x $times, 0, $width);
+		return $config{'trackbar_style'} . substr($string x $times, 0, $width);
     }
 }
 
