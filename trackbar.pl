@@ -303,6 +303,26 @@ sub cmd_mark {
     Irssi::active_win()->view()->redraw();
 }
 
+# mark all visible windows with a line
+sub cmd_mark_visual {
+    my $w= Irssi::active_win();
+	my $refs =$w->{refnum};
+	my $refa;
+
+	cmd_mark();
+
+	do {
+        Irssi::command('window down');
+    	$w= Irssi::active_win();
+		$refa =$w->{refnum};
+
+		if ($refs != $refa) {
+			cmd_mark();
+		}
+
+	} while ($refs != $refa)
+}
+
 #  /tb or /trackbar
 sub cmd_tb {
    if ($#_ >=0 ) {
@@ -313,6 +333,8 @@ sub cmd_tb {
           cmd_mark();
        } elsif ($sc eq "help") {
            cmd_help("trackbar");
+       } elsif ($sc eq "vmark") {
+		   cmd_mark_visual();
        } else {
            cmd_scroll();
        }
@@ -330,6 +352,8 @@ sub cmd_help {
 /trackbar or /tb
     /tb mark
        - Set the trackbar of the current window at the bottom
+    /tb vmark
+       - Set the trackbar on all visible windows
     /tb scroll
        - Scroll to where the trackbar is right now
     /tb help
@@ -347,11 +371,13 @@ Irssi::command_bind('tb', 'cmd_tb');
 Irssi::command_bind('tb help', 'cmd_tb');
 Irssi::command_bind('tb mark', 'cmd_tb');
 Irssi::command_bind('tb scroll', 'cmd_tb');
+Irssi::command_bind('tb vmark', 'cmd_tb');
 
 Irssi::command_bind('trackbar', 'cmd_tb');
 Irssi::command_bind('trackbar help', 'cmd_tb');
 Irssi::command_bind('trackbar mark', 'cmd_tb');
 Irssi::command_bind('trackbar scroll', 'cmd_tb');
+Irssi::command_bind('trackbar vmark', 'cmd_tb');
 
 Irssi::command_bind('mark', 'cmd_mark');
 #Irssi::command_bind('scroll', 'cmd_scroll');
