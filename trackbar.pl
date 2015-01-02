@@ -84,6 +84,8 @@
 #  1.1: - Fixed bug when closing window
 #  1.0: - Initial release
 #
+# Contacts
+#  https://github.com/mjholtkamp/irssi-trackbar
 #
 # Known bugs:
 #  - if you /clear a window, it will be uncleared when returning to the window
